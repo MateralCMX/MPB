@@ -71,7 +71,7 @@ namespace MPB.BLL
             if (tableModel.Columns != null && tableModel.Columns.Count > 0)
             {
                 ColumnModel PKitem = tableModel.Columns.Where(m => m.IsPK == 1).FirstOrDefault();
-                if (PKitem == null)
+                if (PKitem == null && !tableModel.Columns[0].Name.Contains("FK_"))
                 {
                     tableModel.Columns[0].IsPK = 1;
                 }
@@ -85,7 +85,19 @@ namespace MPB.BLL
                     }
                     if (item.IsPK == 1)
                     {
-                        code += String.Format("        [Key]\r\n", item.Name);
+                        code += "        [Key]\r\n";
+                    }
+                    if (item.IsNull == 0 && item.IsPK == 0)
+                    {
+                        code += "        [Required]\r\n";
+                    }
+                    if (item.TypeByCSharp == "string")
+                    {
+                        code += string.Format("        [MaxLength({0})]\r\n", item.Length);
+                    }
+                    if (item.Types == "timestamp")
+                    {
+                        code += "        [Timestamp]\r\n";
                     }
                     code += String.Format("        public {0} {1} ", item.TypeByCSharp, item.Name) + "{ get; set; }\r\n";
                 }

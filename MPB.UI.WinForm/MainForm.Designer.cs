@@ -101,7 +101,7 @@
             this.TextDBName.Name = "TextDBName";
             this.TextDBName.Size = new System.Drawing.Size(100, 21);
             this.TextDBName.TabIndex = 1;
-            this.TextDBName.Text = "RTPay";
+            this.TextDBName.Text = "BeiDouBMSDB";
             // 
             // TextDBAccount
             // 
