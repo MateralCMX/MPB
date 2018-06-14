@@ -6,7 +6,7 @@ namespace MPB.Model
     /// <summary>
     /// 表模型
     /// </summary>
-    public class TableModel
+    public class SqlServerTableModel
     {
         /// <summary>
         /// 唯一标识
@@ -26,12 +26,12 @@ namespace MPB.Model
         /// <summary>
         /// 所拥有的列
         /// </summary>
-        public List<ColumnModel> Columns { get; set; }
+        public List<SqlServerColumnModel> Columns { get; set; }
     }
     /// <summary>
     /// 列模型
     /// </summary>
-    public class ColumnModel
+    public class SqlServerColumnModel
     {
         /// <summary>
         /// 名称
@@ -46,8 +46,8 @@ namespace MPB.Model
         /// <summary>
         /// 数据库类型
         /// </summary>
-        [MColumnModel("Types")]
-        public string Types { get; set; }
+        [MColumnModel("DataType")]
+        public string DataType { get; set; }
         /// <summary>
         /// 长度
         /// </summary>
@@ -71,7 +71,7 @@ namespace MPB.Model
             get
             {
                 string typeInfo = null;
-                switch (Types)
+                switch (DataType)
                 {
                     case "tinyint":
                         typeInfo = IsNull == 1 ? "byte?" : "byte";
@@ -145,7 +145,7 @@ namespace MPB.Model
             get
             {
                 string typeInfo = null;
-                switch (Types)
+                switch (DataType)
                 {
                     case "bit":
                         typeInfo = "boolean";

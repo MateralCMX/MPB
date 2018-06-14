@@ -10,42 +10,35 @@ using System.Threading.Tasks;
 
 namespace MPB.BLL
 {
-    public class DBBLL
+    public class SqlServerBLL
     {
         /// <summary>
         /// 数据操作类
         /// </summary>
-        private readonly DBDAL _dal;
+        private readonly SqlServerDAL _dal;
+        /// <summary>
+        /// 项目名称
+        /// </summary>
         public static string ProjectName = "MateralProject";
         /// <summary>
         /// 构造方法
         /// </summary>
-        public DBBLL()
+        public SqlServerBLL()
         {
-            _dal = new DBDAL();
+            _dal = new SqlServerDAL();
         }
         /// <summary>
         /// 获得所有用户自定义表信息
         /// </summary>
         /// <returns></returns>
-        public List<TableModel> GetUserCreateTableInfo()
+        public List<SqlServerTableModel> GetUserCreateTableInfo()
         {
-            List<TableModel> listM = _dal.GetUserCreateTableInfo();
+            List<SqlServerTableModel> listM = _dal.GetUserCreateTableInfo();
             for (int i = 0; i < listM.Count; i++)
             {
                 listM[i].Columns = _dal.GetTableColumnInfoByTableID(listM[i].ID);
             }
             return listM;
-        }
-        /// <summary>
-        /// 创建模型文件
-        /// </summary>
-        /// <param name="di">父级目录</param>
-        public void CreateModelFiles(DirectoryInfo di)
-        {
-            List<TableModel> listM = GetUserCreateTableInfo();
-            CreateModelFilesByCSharp(listM, di);
-            CreateModelFilesByTypeScript(listM, di);
         }
         #region C#
         /// <summary>
@@ -53,11 +46,14 @@ namespace MPB.BLL
         /// </summary>
         /// <param name="tableModel">表模型</param>
         /// <returns>模型代码字符串</returns>
-        public string GetModelCodeStrByCSharp(TableModel tableModel)
+        public string GetModelCodeStrByCSharp(SqlServerTableModel tableModel)
         {
             string code = string.Empty;
             code += "using System;\r\n";
+            code += "using System.ComponentModel;\r\n";
             code += "using System.ComponentModel.DataAnnotations;\r\n";
+            code += "using System.ComponentModel.DataAnnotations.Schema;\r\n";
+            code += "using MateralTools.MEntityFramework;\r\n";
             code += String.Format("namespace {0}.Model\r\n", ProjectName);
             code += "{\r\n";
             if (!tableModel.Remark.MIsNullOrEmpty())
@@ -66,39 +62,46 @@ namespace MPB.BLL
                 code += String.Format("    /// {0}\r\n", tableModel.Remark);
                 code += "    /// </summary>\r\n";
             }
+            code += String.Format("    [Table(\"{0}\")]\r\n", tableModel.Name);
             code += String.Format("    public class {0}\r\n", tableModel.Name);
             code += "    {\r\n";
             if (tableModel.Columns != null && tableModel.Columns.Count > 0)
             {
-                ColumnModel PKitem = tableModel.Columns.Where(m => m.IsPK == 1).FirstOrDefault();
-                if (PKitem == null && !tableModel.Columns[0].Name.Contains("FK_"))
+                List<SqlServerColumnModel> PKitems = tableModel.Columns.Where(m => m.IsPK == 1).ToList();
+                if (PKitems == null || PKitems.Count == 0)
                 {
                     tableModel.Columns[0].IsPK = 1;
                 }
-                foreach (ColumnModel item in tableModel.Columns)
+                foreach (SqlServerColumnModel item in tableModel.Columns)
                 {
                     if (!item.Remark.MIsNullOrEmpty())
                     {
                         code += "        /// <summary>\r\n";
                         code += String.Format("        /// {0}\r\n", item.Remark);
                         code += "        /// </summary>\r\n";
+                        code += String.Format("        [Description(\"{0}\")]\r\n", item.Remark);
                     }
+                    code += String.Format("        [Column(\"{0}\")]\r\n", item.Name);
                     if (item.IsPK == 1)
                     {
                         code += "        [Key]\r\n";
                     }
-                    if (item.IsNull == 0 && item.IsPK == 0)
-                    {
-                        code += "        [Required]\r\n";
-                    }
-                    if (item.TypeByCSharp == "string")
-                    {
-                        code += string.Format("        [MaxLength({0})]\r\n", item.Length);
-                    }
-                    if (item.Types == "timestamp")
+                    if (item.DataType == "timestamp")
                     {
                         code += "        [Timestamp]\r\n";
                     }
+                    else if (item.IsNull == 0 && item.IsPK == 0)
+                    {
+                        code += "        [Required]\r\n";
+                    }
+                    if (item.Name == "IsDelete")
+                    {
+                        code += "        [LogicDelete]\r\n";
+                    }
+                    //if (item.TypeByCSharp == "string")
+                    //{
+                    //    code += string.Format("        [MaxLength({0})]\r\n", item.Length);
+                    //}
                     code += String.Format("        public {0} {1} ", item.TypeByCSharp, item.Name) + "{ get; set; }\r\n";
                 }
             }
@@ -111,18 +114,18 @@ namespace MPB.BLL
         /// </summary>
         /// <param name="listM">表列表</param>
         /// <param name="di">父级目录</param>
-        public void CreateModelFilesByCSharp(List<TableModel> listM, DirectoryInfo di)
+        public void CreateModelFilesByCSharp(List<SqlServerTableModel> listM, DirectoryInfo di)
         {
             string code = "";
             byte[] codeBytes;
-            string path = di.FullName + "\\C#";
+            string path = di.FullName + "\\SqlServer\\C#";
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
-            foreach (TableModel item in listM)
+            foreach (SqlServerTableModel item in listM)
             {
-                path = di.FullName + "\\C#\\" + item.Name + ".cs";
+                path = di.FullName + "\\SqlServer\\C#\\" + item.Name + ".cs";
                 code = GetModelCodeStrByCSharp(item);
                 codeBytes = Encoding.UTF8.GetBytes(code);
                 if (File.Exists(path))
@@ -142,7 +145,7 @@ namespace MPB.BLL
         /// </summary>
         /// <param name="tableModel">表模型</param>
         /// <returns>模型代码字符串</returns>
-        public string GetModelCodeStrByTypeScript(TableModel tableModel)
+        public string GetModelCodeStrByTypeScript(SqlServerTableModel tableModel)
         {
             string code = string.Empty;
             if (!tableModel.Remark.MIsNullOrEmpty())
@@ -154,12 +157,12 @@ namespace MPB.BLL
             code += String.Format("    export class {0} ", tableModel.Name) + "{\r\n";
             if (tableModel.Columns != null && tableModel.Columns.Count > 0)
             {
-                ColumnModel PKitem = tableModel.Columns.Where(m => m.IsPK == 1).FirstOrDefault();
+                SqlServerColumnModel PKitem = tableModel.Columns.Where(m => m.IsPK == 1).FirstOrDefault();
                 if (PKitem == null)
                 {
                     tableModel.Columns[0].IsPK = 1;
                 }
-                foreach (ColumnModel item in tableModel.Columns)
+                foreach (SqlServerColumnModel item in tableModel.Columns)
                 {
                     if (!item.Remark.MIsNullOrEmpty())
                     {
@@ -167,7 +170,15 @@ namespace MPB.BLL
                         code += String.Format("     * {0}\r\n", item.Remark);
                         code += "     */\r\n";
                     }
-                    code += String.Format("        public {0}: {1};\r\n", item.Name, item.TypeByTypeScript);
+                    code += String.Format("        public {0}: {1}", item.Name, item.TypeByTypeScript);
+                    if (item.TypeByCSharp == "Guid")
+                    {
+                        code += "=\"" + Guid.Empty.ToString() + "\";\r\n";
+                    }
+                    else
+                    {
+                        code += ";\r\n";
+                    }
                 }
             }
             code += "    }\r\n";
@@ -178,18 +189,18 @@ namespace MPB.BLL
         /// </summary>
         /// <param name="listM">表列表</param>
         /// <param name="di">父级目录</param>
-        public void CreateModelFilesByTypeScript(List<TableModel> listM, DirectoryInfo di)
+        public void CreateModelFilesByTypeScript(List<SqlServerTableModel> listM, DirectoryInfo di)
         {
             string code = "";
             code += "'use strict';\r\n";
-            code += String.Format("namespace {0}.Model", ProjectName)+ "{\r\n";
-            string path = di.FullName + "\\TypeScript";
+            code += String.Format("namespace {0}.Model", ProjectName) + "{\r\n";
+            string path = di.FullName + "\\SqlServer\\TypeScript";
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
             }
             path += string.Format("\\{0}Model.ts", ProjectName);
-            foreach (TableModel item in listM)
+            foreach (SqlServerTableModel item in listM)
             {
                 code += GetModelCodeStrByTypeScript(item);
             }
@@ -202,6 +213,32 @@ namespace MPB.BLL
             using (FileStream sr = File.Create(path))
             {
                 sr.Write(codeBytes, 0, codeBytes.Length - 1);
+            }
+        }
+        #endregion
+        #region Angular
+        public void CreateModelFilesByAngular(List<SqlServerTableModel> listM, DirectoryInfo di)
+        {
+            string code = "";
+            byte[] codeBytes;
+            string path = di.FullName + "\\SqlServer\\Angular";
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            foreach (SqlServerTableModel item in listM)
+            {
+                path = di.FullName + "\\SqlServer\\Angular\\" + item.Name + ".ts";
+                code = GetModelCodeStrByTypeScript(item);
+                codeBytes = Encoding.UTF8.GetBytes(code);
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+                using (FileStream sr = File.Create(path))
+                {
+                    sr.Write(codeBytes, 0, codeBytes.Length - 1);
+                }
             }
         }
         #endregion

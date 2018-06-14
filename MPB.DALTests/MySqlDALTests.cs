@@ -10,27 +10,31 @@ using System.Threading.Tasks;
 namespace MPB.DAL.Tests
 {
     [TestClass()]
-    public class DBDALTests
+    public class MySqlDALTests
     {
         /// <summary>
         /// 数据库数据操作对象
         /// </summary>
-        private readonly DBDAL _dal;
-        public DBDALTests()
+        private readonly MySqlDAL _dal;
+        public MySqlDALTests()
         {
-            DBDAL.connectionString = "Data Source=127.0.0.1;Initial Catalog=RTPay;Persist Security Info=True;User ID=sa;Password=123456";
-            _dal = new DBDAL();
+            string address = "220.165.9.44";
+            int port = 4311;
+            string account = "root";
+            string password = "cmsserverv6";
+            string dbName = "1010gps";
+            _dal = new MySqlDAL(address, dbName, account, password, port);
         }
         [TestMethod()]
         public void GetUserCreateTableInfoTest()
         {
-            List<TableModel> listM = _dal.GetUserCreateTableInfo();
+            List<MySqlTableModel> listM = _dal.GetUserCreateTableInfo();
             Assert.IsTrue(listM != null && listM.Count > 0);
         }
         [TestMethod()]
-        public void GetTableColumnInfoByTableIDTest()
+        public void GetTableColumnInfoByTableNameTest()
         {
-            List<ColumnModel> listM = _dal.GetTableColumnInfoByTableID(1237579447);
+            List<MySqlColumnModel> listM = _dal.GetTableColumnInfoByTableName("jt808_company_info");
             Assert.IsTrue(listM != null && listM.Count > 0);
         }
     }
